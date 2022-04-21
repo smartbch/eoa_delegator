@@ -39,9 +39,7 @@ contract eoa_delegator_1 {
 	bytes memory ret;
         (success, ret) = contractAddr.call(callData);
         assembly {
-            switch success
-            case 0 { revert(ret, returndatasize()) }
-            default {}
+            if eq(success, 0) { revert(ret, returndatasize()) }
         }
 
 	// Revoke the approved allowance
