@@ -81,7 +81,7 @@ contract DelegatorFactory {
     event NewContractCreated(address indexed addr);
 
     function getAddress(uint _salt) public view returns (address) {
-        bytes memory bytecode = type(eoa_delegator).creationCode;
+        bytes memory bytecode = type(EOADelegator).creationCode;
         bytes32 codeHash = keccak256(bytecode);
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), bytes32(_salt), codeHash));
         return address(uint160(uint(hash)));
@@ -92,7 +92,7 @@ contract DelegatorFactory {
     }
 
     function create(bytes32 _salt) external {
-        address delegator = address(new eoa_delegator{salt : _salt}());
+        address delegator = address(new EOADelegator{salt : _salt}());
         emit NewContractCreated(delegator);
     }
 }
