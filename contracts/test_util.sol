@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/proxy/Proxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "hardhat/console.sol";
 
-contract mock_eoa is Proxy {
+contract MockEOA is Proxy {
     address eoa_delegator;
     uint vault256;
     uint tokenA256;
@@ -25,18 +25,22 @@ contract mock_eoa is Proxy {
         uint _tokenA = tokenA256;
         uint _tokenB = tokenB256;
         uint _vault = vault256;
+        uint _tokenAmount = 2 << 248;
         assembly {
             calldatacopy(0, 0, calldatasize())
             // uint contractAddr256;
             // uint tokenAddr256;
             // uint amount;
+            // ...
+            // uint8 tokenNum;
             mstore(calldatasize(), _vault)
             mstore(add(calldatasize(), 20), _tokenA)
             mstore(add(calldatasize(), 40), amount)
             mstore(add(calldatasize(), 72), _tokenB)
             mstore(add(calldatasize(), 92), amount)
+            mstore(add(calldatasize(), 124), _tokenAmount)
 
-            let result := delegatecall(gas(), implementation, 0, add(calldatasize(), 124), 0, 0)
+        let result := delegatecall(gas(), implementation, 0, add(calldatasize(), 125), 0, 0)
             returndatacopy(0, 0, returndatasize())
             switch result
             case 0 {
@@ -49,13 +53,13 @@ contract mock_eoa is Proxy {
     }
 }
 
-contract token is ERC20 {
+contract Token is ERC20 {
     constructor()ERC20("test", "TST") {
         super._mint(msg.sender, 10000 * 10 ** 18);
     }
 }
 
-contract vault {
+contract Vault {
     IERC20 tokenA;
     IERC20 tokenB;
 

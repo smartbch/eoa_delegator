@@ -12,14 +12,14 @@ describe("delegator", function () {
 
     before(async function () {
             [owner] = await ethers.getSigners();
-            const token = await ethers.getContractFactory("token");
+            const token = await ethers.getContractFactory("Token");
             usd = await token.deploy();
             abc = await token.deploy();
-            const delegatorCt = await ethers.getContractFactory("eoa_delegator");
-            delegator = await delegatorCt.deploy(2);
-            vaultCt = await ethers.getContractFactory("vault");
+            const delegatorCt = await ethers.getContractFactory("EOADelegator");
+            delegator = await delegatorCt.deploy();
+            vaultCt = await ethers.getContractFactory("Vault");
             vault = await vaultCt.deploy(usd.address, abc.address);
-            const mock_eoa = await ethers.getContractFactory("mock_eoa");
+            const mock_eoa = await ethers.getContractFactory("MockEOA");
             eoa = await mock_eoa.deploy(delegator.address, usd.address, abc.address, vault.address);
         }
     )
@@ -43,5 +43,13 @@ describe("delegator", function () {
         expect(await usd.allowance(eoa.address, vault.address)).to.equal(0n);
         expect(await abc.balanceOf(vault.address)).to.equal(100n * 10n ** 18n);
         expect(await abc.allowance(eoa.address, vault.address)).to.equal(0n);
+    });
+
+    it("test factory", async function () {
+        const factoryCt = await ethers.getContractFactory("DelegatorFactory");
+        const factory = await factoryCt.deploy();
+        const tx = await factory.create(1);
+        const receipt = await tx.wait();
+        expect(receipt.logs[0].topics[1]).to.equal(ethers.utils.hexZeroPad(await factory.getAddress(factory.address, 1), 32).toLowerCase());
     });
 });
