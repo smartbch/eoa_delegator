@@ -8,10 +8,25 @@ async function main() {
     await factory.deployed();
     console.log(await factory.deployer());
     let address;
-    for (let i = 20000; i < 1000000; i++) {
+    for (let i = 0; i < 10000000; i++) {
         address = await factory.getAddress(1, i);
-        //console.log(address.toLowerCase());
-        if (address.toLowerCase().startsWith("0xeoa01")) {
+        console.log(address.toLowerCase());
+        if (address.toLowerCase().startsWith("0xe0a001")) {
+            console.log("salt:", i, "address:", address);
+            break
+        }
+        address = await factory.getAddress(2, i);
+        if (address.toLowerCase().startsWith("0xe0a002")) {
+            console.log("salt:", i, "address:", address);
+            break
+        }
+        address = await factory.getAddress(3, i);
+        if (address.toLowerCase().startsWith("0xe0a003")) {
+            console.log("salt:", i, "address:", address);
+            break
+        }
+        address = await factory.getAddress(4, i);
+        if (address.toLowerCase().startsWith("0xe0a004")) {
             console.log("salt:", i, "address:", address);
             break
         }
