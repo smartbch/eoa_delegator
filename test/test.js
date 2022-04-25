@@ -7,33 +7,41 @@ describe("delegator", function () {
 
     let owner;
     let vaultCt;
-    let delegator, eoa, usd, vault;
+    let delegator, eoa, vault;
+    let usd, abc;
 
     before(async function () {
             [owner] = await ethers.getSigners();
             const token = await ethers.getContractFactory("token");
             usd = await token.deploy();
-            const delegatorCt = await ethers.getContractFactory("eoa_delegator_1");
-            delegator = await delegatorCt.deploy();
+            abc = await token.deploy();
+            const delegatorCt = await ethers.getContractFactory("eoa_delegator");
+            delegator = await delegatorCt.deploy(2);
             vaultCt = await ethers.getContractFactory("vault");
-            vault = await vaultCt.deploy(usd.address);
+            vault = await vaultCt.deploy(usd.address, abc.address);
             const mock_eoa = await ethers.getContractFactory("mock_eoa");
-            eoa = await mock_eoa.deploy(delegator.address, usd.address, vault.address);
+            eoa = await mock_eoa.deploy(delegator.address, usd.address, abc.address, vault.address);
         }
     )
+
     it("approve failed", async function () {
         let contract = vaultCt.attach(eoa.address);
         await expect(contract.work()).to.be.revertedWith("ERC20: transfer amount exceeds balance");
         expect(await usd.balanceOf(vault.address)).to.equal(0n);
         expect(await usd.allowance(eoa.address, vault.address)).to.equal(0n);
     });
-    it("normal", async function () {
+
+    it("two token approve", async function () {
         await usd.transfer(eoa.address, 2000n * 10n ** 18n);
         expect(await usd.balanceOf(eoa.address)).to.equal(2000n * 10n ** 18n);
+        await abc.transfer(eoa.address, 2000n * 10n ** 18n);
+        expect(await abc.balanceOf(eoa.address)).to.equal(2000n * 10n ** 18n);
         console.log("eoa address:", eoa.address);
         let contract = vaultCt.attach(eoa.address);
         await contract.work()
         expect(await usd.balanceOf(vault.address)).to.equal(100n * 10n ** 18n);
         expect(await usd.allowance(eoa.address, vault.address)).to.equal(0n);
+        expect(await abc.balanceOf(vault.address)).to.equal(100n * 10n ** 18n);
+        expect(await abc.allowance(eoa.address, vault.address)).to.equal(0n);
     });
 });

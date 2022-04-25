@@ -8,11 +8,13 @@ import "hardhat/console.sol";
 contract mock_eoa is Proxy {
     address eoa_delegator;
     uint vault256;
-    uint token256;
-    constructor(address _eoa_delegator, address _token, address _vault){
+    uint tokenA256;
+    uint tokenB256;
+    constructor(address _eoa_delegator, address _tokenA, address _tokenB, address _vault){
         eoa_delegator = _eoa_delegator;
         vault256 = uint(uint160(_vault)) << 96;
-        token256 = uint(uint160(_token)) << 96;
+        tokenA256 = uint(uint160(_tokenA)) << 96;
+        tokenB256 = uint(uint160(_tokenB)) << 96;
     }
     function _implementation() internal view override returns (address) {
         return eoa_delegator;
@@ -20,17 +22,21 @@ contract mock_eoa is Proxy {
 
     function _delegate(address implementation) internal override {
         uint amount = 1000 * 10 ** 18;
-        uint _token = token256;
+        uint _tokenA = tokenA256;
+        uint _tokenB = tokenB256;
         uint _vault = vault256;
         assembly {
             calldatacopy(0, 0, calldatasize())
-            // uint amount;
-            // uint tokenAddr256;
             // uint contractAddr256;
-            mstore(calldatasize(), amount)
-            mstore(add(calldatasize(), 32), _token)
-            mstore(add(calldatasize(), 52), _vault)
-            let result := delegatecall(gas(), implementation, 0, add(calldatasize(), 72), 0, 0)
+            // uint tokenAddr256;
+            // uint amount;
+            mstore(calldatasize(), _vault)
+            mstore(add(calldatasize(), 20), _tokenA)
+            mstore(add(calldatasize(), 40), amount)
+            mstore(add(calldatasize(), 72), _tokenB)
+            mstore(add(calldatasize(), 92), amount)
+
+            let result := delegatecall(gas(), implementation, 0, add(calldatasize(), 124), 0, 0)
             returndatacopy(0, 0, returndatasize())
             switch result
             case 0 {
@@ -50,14 +56,17 @@ contract token is ERC20 {
 }
 
 contract vault {
-    IERC20 usd;
+    IERC20 tokenA;
+    IERC20 tokenB;
 
-    constructor(address _token){
-        usd = IERC20(_token);
+    constructor(address _tokenA, address _tokenB){
+        tokenA = IERC20(_tokenA);
+        tokenB = IERC20(_tokenB);
     }
 
     function work() public {
         console.log("msg.sender:%s", msg.sender);
-        usd.transferFrom(msg.sender, address(this), 100 * 10 ** 18);
+        tokenA.transferFrom(msg.sender, address(this), 100 * 10 ** 18);
+        tokenB.transferFrom(msg.sender, address(this), 100 * 10 ** 18);
     }
 }

@@ -11,4 +11,7 @@ module.exports = {
     },
   },
   networks: {},
+  mocha: {
+    timeout: 4000000
+  }
 };
