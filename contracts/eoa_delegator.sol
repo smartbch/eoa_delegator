@@ -78,21 +78,24 @@ contract eoa_delegator {
     receive() external payable {
         _delegate();
     }
-
 }
 
-
 contract DelegatorFactory {
-    address public deployer;
-    constructor(address _deployer){
-        deployer = _deployer;
-    }
-    event NewContractCreated(address indexed addr);
+    event NewContractCreated(uint indexed tokenNums, address indexed addr);
 
-    function getAddress(uint tokenNums, uint salt) public view returns (address) {
+    function getAddress(uint _tokenNums, uint _salt, address _deployer) public view returns (address) {
         bytes memory bytecode = type(eoa_delegator).creationCode;
-        bytes32 codeHash = keccak256(abi.encodePacked(bytecode, abi.encode(tokenNums)));
-        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), deployer, bytes32(salt), codeHash));
+        bytes32 codeHash = keccak256(abi.encodePacked(bytecode, abi.encode(_tokenNums)));
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), _deployer, bytes32(_salt), codeHash));
         return address(uint160(uint(hash)));
+    }
+
+    function getAddressByCreate(address _sender, uint _nonce) public view returns (address){
+        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), _sender, bytes1(_nonce))))));
+    }
+
+    function create(uint _salt, uint _tokenNums) external {
+        address delegator = address(new eoa_delegator{salt : _salt}(_tokenNums));
+        emit NewContractCreated(_tokenNums, proxy);
     }
 }
