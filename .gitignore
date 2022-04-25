@@ -2,3 +2,6 @@
 artifacts/
 cache/
 node_modules/
+*.swp
+*.un~
+*.sol~

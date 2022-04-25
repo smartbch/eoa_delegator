@@ -22,38 +22,43 @@ contract eoa_delegator {
             inputSize := sub(calldatasize(), extraBytes)
         }
         uint contractAddr256;
+		uint argPtr = inputSize;
         assembly {
-            contractAddr256 := calldataload(inputSize)
-            inputSize := add(inputSize, 20)
+            contractAddr256 := calldataload(argPtr)
+            argPtr := add(argPtr, 20)
         }
         address contractAddr = address(bytes20(uint160(contractAddr256 >> 96)));
 
-        // fetch three variables from the end of calldata
         address[] memory tokens = new address[](tokenNums);
         for (uint i = 0; i < tokenNums; i++) {
+            // fetch two variables from the end of calldata
             uint tokenAddr256;
             uint amount;
             assembly {
-                tokenAddr256 := calldataload(inputSize)
-                inputSize := add(inputSize, 20)
-                amount := calldataload(inputSize)
-                inputSize := add(inputSize, 32)
+                tokenAddr256 := calldataload(argPtr)
+                argPtr := add(argPtr, 20)
+                amount := calldataload(argPtr)
+                argPtr := add(argPtr, 32)
             }
             // Approve an SEP20 token to the target contract
             tokens[i] = address(bytes20(uint160(tokenAddr256 >> 96)));
             (bool success, bytes memory data) = tokens[i].call(abi.encodeWithSelector(APPROVE, contractAddr, amount));
             require(success && (data.length == 0 || abi.decode(data, (bool))), "approve failed");
         }
+        uint callRetPtr;
+        uint retSize;
         // call target contract
         assembly {
-            let ptr := mload(0x40)
-            calldatacopy(ptr, 0, inputSize)
-            let result := call(gas(), contractAddr, callvalue(), ptr, inputSize, 0, 0)
-            returndatacopy(0, 0, returndatasize())
-            switch result
-            case 0 {
-                revert(0, returndatasize())
+            callRetPtr := mload(0x40) // store the "free memory pointer"
+            calldatacopy(callRetPtr, 0, inputSize)
+            let result := call(gas(), contractAddr, callvalue(), callRetPtr, inputSize, 0, 0)
+            retSize := returndatasize()
+            let ptr := add(callRetPtr, retSize)
+            returndatacopy(callRetPtr, 0, retSize)
+            if eq(result, 0) {
+                revert(callRetPtr, retSize)
             }
+            mstore(0x40, ptr)
         }
         for (uint j = 0; j < tokenNums; j++) {
             // Revoke the approved allowance
@@ -62,7 +67,7 @@ contract eoa_delegator {
         }
         // return on success
         assembly {
-            return (0, returndatasize())
+            return (callRetPtr, retSize)
         }
     }
 
