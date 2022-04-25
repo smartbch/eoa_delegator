@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-contract eoa_delegator {
+contract EOADelegator {
     bytes4 internal constant APPROVE = bytes4(keccak256(bytes("approve(address,uint256)")));
 
     function _delegate() internal {
@@ -12,6 +12,7 @@ contract eoa_delegator {
         assembly {
             tokenNums := calldataload(sub(calldatasize(), 1))
 		}
+		tokenNums >>= 248;
         uint extraBytes = (32 + 20) * tokenNums + 20 + 1;
         // we will use the beginning of the calldata to call the target contract
         uint inputSize;
