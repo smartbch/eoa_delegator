@@ -10,7 +10,7 @@ async function main() {
     let address;
     for (let i = 0; i < 10000000; i++) {
         address = await factory.getAddress(1, i);
-        console.log(address.toLowerCase());
+        //console.log(address.toLowerCase());
         if (address.toLowerCase().startsWith("0xe0a001")) {
             console.log("salt:", i, "address:", address);
             break

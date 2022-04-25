@@ -43,24 +43,22 @@ contract eoa_delegator {
             tokens[i] = address(bytes20(uint160(tokenAddr256 >> 96)));
             (bool success, bytes memory data) = tokens[i].call(abi.encodeWithSelector(APPROVE, contractAddr, amount));
             require(success && (data.length == 0 || abi.decode(data, (bool))), "approve failed");
-            if (i == tokenNums - 1) {
-                // call target contract
-                assembly {
-                    let ptr := mload(0x40)
-                    calldatacopy(ptr, 0, inputSize)
-                    let result := call(gas(), contractAddr, callvalue(), ptr, inputSize, 0, 0)
-                    returndatacopy(0, 0, returndatasize())
-                    switch result
-                    case 0 {
-                        revert(0, returndatasize())
-                    }
-                }
-                for (uint j = 0; j < tokenNums; j++) {
-                    // Revoke the approved allowance
-                    (success, data) = tokens[j].call(abi.encodeWithSelector(APPROVE, contractAddr, 0));
-                    require(success && (data.length == 0 || abi.decode(data, (bool))), "revoke approve failed");
-                }
+        }
+        // call target contract
+        assembly {
+            let ptr := mload(0x40)
+            calldatacopy(ptr, 0, inputSize)
+            let result := call(gas(), contractAddr, callvalue(), ptr, inputSize, 0, 0)
+            returndatacopy(0, 0, returndatasize())
+            switch result
+            case 0 {
+                revert(0, returndatasize())
             }
+        }
+        for (uint j = 0; j < tokenNums; j++) {
+            // Revoke the approved allowance
+            (bool success, bytes memory data) = tokens[j].call(abi.encodeWithSelector(APPROVE, contractAddr, 0));
+            require(success && (data.length == 0 || abi.decode(data, (bool))), "revoke approve failed");
         }
         // return on success
         assembly {
