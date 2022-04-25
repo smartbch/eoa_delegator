@@ -6,18 +6,15 @@ import "hardhat/console.sol";
 
 contract eoa_delegator {
     bytes4 internal constant APPROVE = bytes4(keccak256(bytes("approve(address,uint256)")));
-    uint immutable tokenNums;
-    uint immutable ExtraBytes;
-
-    constructor(uint _tokenNums) {
-        tokenNums = _tokenNums;
-        ExtraBytes = (32 + 20) * _tokenNums + 20;
-    }
 
     function _delegate() internal {
+        uint tokenNums;
+        assembly {
+            tokenNums := calldataload(sub(calldatasize(), 1))
+		}
+        uint extraBytes = (32 + 20) * tokenNums + 20 + 1;
         // we will use the beginning of the calldata to call the target contract
         uint inputSize;
-        uint extraBytes = ExtraBytes;
         assembly {
             inputSize := sub(calldatasize(), extraBytes)
         }
@@ -53,12 +50,11 @@ contract eoa_delegator {
             calldatacopy(callRetPtr, 0, inputSize)
             let result := call(gas(), contractAddr, callvalue(), callRetPtr, inputSize, 0, 0)
             retSize := returndatasize()
-            let ptr := add(callRetPtr, retSize)
             returndatacopy(callRetPtr, 0, retSize)
             if eq(result, 0) {
                 revert(callRetPtr, retSize)
             }
-            mstore(0x40, ptr)
+            mstore(0x40, add(callRetPtr, retSize))
         }
         for (uint j = 0; j < tokenNums; j++) {
             // Revoke the approved allowance
@@ -81,21 +77,21 @@ contract eoa_delegator {
 }
 
 contract DelegatorFactory {
-    event NewContractCreated(uint indexed tokenNums, address indexed addr);
+    event NewContractCreated(address indexed addr);
 
-    function getAddress(uint _tokenNums, uint _salt, address _deployer) public view returns (address) {
+    function getAddress(uint _salt) public view returns (address) {
         bytes memory bytecode = type(eoa_delegator).creationCode;
-        bytes32 codeHash = keccak256(abi.encodePacked(bytecode, abi.encode(_tokenNums)));
-        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), _deployer, bytes32(_salt), codeHash));
+        bytes32 codeHash = keccak256(bytecode);
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), bytes32(_salt), codeHash));
         return address(uint160(uint(hash)));
     }
 
-    function getAddressByCreate(address _sender, uint _nonce) public view returns (address){
-        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), _sender, bytes1(_nonce))))));
+    function getAddressByCreate(address _sender, uint _nonce) public pure returns (address){
+        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xd6), bytes1(0x94), _sender, bytes1(uint8(_nonce)))))));
     }
 
-    function create(uint _salt, uint _tokenNums) external {
-        address delegator = address(new eoa_delegator{salt : _salt}(_tokenNums));
-        emit NewContractCreated(_tokenNums, proxy);
+    function create(bytes32 _salt) external {
+        address delegator = address(new eoa_delegator{salt : _salt}());
+        emit NewContractCreated(delegator);
     }
 }
