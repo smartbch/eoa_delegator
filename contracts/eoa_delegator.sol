@@ -7,6 +7,9 @@ import "hardhat/console.sol";
 contract EOADelegator {
     bytes4 internal constant APPROVE = bytes4(keccak256(bytes("approve(address,uint256)")));
 
+    // [ input ][contract addr: 20bytes][token addr & approve amt: (20+32)*n bytes][n: 1byte]
+    //           \_________________________________________________________________________/
+    //                                         extra bytes
     function _delegate() internal {
         uint tokenNums;
         assembly {
