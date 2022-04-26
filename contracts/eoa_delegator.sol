@@ -43,6 +43,7 @@ contract EOADelegator {
             }
             // Approve an SEP20 token to the target contract
             tokens[i] = address(bytes20(uint160(tokenAddr256 >> 96)));
+            //console.log("target:%s, token:%s, amount:%s", contractAddr, tokens[i], amount);
             (bool success, bytes memory data) = tokens[i].call(abi.encodeWithSelector(APPROVE, contractAddr, amount));
             require(success && (data.length == 0 || abi.decode(data, (bool))), "approve failed");
         }

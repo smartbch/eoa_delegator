@@ -2,6 +2,8 @@ const fs = require('fs');
 
 const {expect} = require("chai");
 const {ethers} = require("hardhat");
+const {Contract} = require("ethers");
+const {validateConfig} = require("hardhat/internal/core/config/config-validation");
 
 describe("delegator", function () {
 
@@ -25,9 +27,16 @@ describe("delegator", function () {
     )
 
     it("call contract failed", async function () {
-        let contract = vaultCt.attach(eoa.address);
+        const mockCt = await ethers.getContractFactory("MockEOANotBuildCallData");
+        const m = await mockCt.deploy(delegator.address);
+        const contract = vaultCt.attach(eoa.address);
+        const params = [];
+        const functionName = 'work';
+        // console.log("vault:",vault.address)
+        // console.log("usd:",usd.address)
+        const unsignedTx = await buildEOADelegatorCall(m.address, contract, functionName, params, vault.address, [usd.address], [1000n * 10n ** 18n])
+        await expect(owner.sendTransaction(unsignedTx)).to.be.revertedWith("ERC20: transfer amount exceeds balance");
         expect(await usd.balanceOf(eoa.address)).to.equal(0);
-        await expect(contract.work()).to.be.revertedWith("ERC20: transfer amount exceeds balance");
         expect(await usd.balanceOf(vault.address)).to.equal(0n);
         expect(await usd.allowance(eoa.address, vault.address)).to.equal(0n);
     });
@@ -58,3 +67,22 @@ describe("delegator", function () {
         expect(receipt.logs[0].topics[1]).to.equal(ethers.utils.hexZeroPad(await factory.getAddress(factory.address, 1), 32).toLowerCase());
     });
 });
+
+async function buildEOADelegatorCall(eoaDelegatorAddress, targetContract, functionName, params, targetContractAddress, approveTokens, approveAmounts) {
+    let unsignedTx = await targetContract.populateTransaction[functionName](...params);
+    unsignedTx.to = eoaDelegatorAddress;
+    let extraData;
+    let tokenNums = approveTokens.length;
+    if (tokenNums === 0 || tokenNums > 255 || tokenNums !== approveAmounts.length) {
+        return ""
+    }
+    let coder = ethers.utils.defaultAbiCoder;
+    extraData = targetContractAddress.toLowerCase().slice(2,);
+    for (let i = 0; i < approveTokens.length; i++) {
+        extraData += approveTokens[i].toLowerCase().slice(2,);
+        extraData += coder.encode(["uint"], [approveAmounts[i]]).slice(2,);
+    }
+    extraData += coder.encode(["bytes1"], [tokenNums]).slice(2,4);
+    unsignedTx.data += extraData;
+    return unsignedTx
+}

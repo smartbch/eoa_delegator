@@ -54,6 +54,16 @@ contract MockEOA is Proxy {
     }
 }
 
+contract MockEOANotBuildCallData is Proxy {
+    address eoa_delegator;
+    constructor(address _eoa_delegator){
+        eoa_delegator = _eoa_delegator;
+    }
+    function _implementation() internal view override returns (address) {
+        return eoa_delegator;
+    }
+}
+
 contract Token is ERC20 {
     constructor()ERC20("test", "TST") {
         super._mint(msg.sender, 10000 * 10 ** 18);
