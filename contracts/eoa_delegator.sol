@@ -11,8 +11,8 @@ contract EOADelegator {
         uint tokenNums;
         assembly {
             tokenNums := calldataload(sub(calldatasize(), 1))
-		}
-		tokenNums >>= 248;
+        }
+        tokenNums >>= 248;
         uint extraBytes = (32 + 20) * tokenNums + 20 + 1;
         // we will use the beginning of the calldata to call the target contract
         uint inputSize;
@@ -20,7 +20,7 @@ contract EOADelegator {
             inputSize := sub(calldatasize(), extraBytes)
         }
         uint contractAddr256;
-		uint argPtr = inputSize;
+        uint argPtr = inputSize;
         assembly {
             contractAddr256 := calldataload(argPtr)
             argPtr := add(argPtr, 20)
@@ -51,10 +51,11 @@ contract EOADelegator {
             calldatacopy(callRetPtr, 0, inputSize)
             let result := call(gas(), contractAddr, callvalue(), callRetPtr, inputSize, 0, 0)
             retSize := returndatasize()
-            if eq(result, 0) {
-                revert(callRetPtr, retSize)
-            }
+            callRetPtr := add(callRetPtr, inputSize)
             returndatacopy(callRetPtr, 0, retSize)
+            if eq(result, 0) {
+                revert (callRetPtr, retSize)
+            }
             mstore(0x40, add(callRetPtr, retSize))
         }
         for (uint j = 0; j < tokenNums; j++) {
@@ -80,7 +81,7 @@ contract EOADelegator {
 contract DelegatorFactory {
     event NewContractCreated(address indexed addr);
 
-    function getAddress(address _sender, uint _salt) public view returns (address) {
+    function getAddress(address _sender, uint _salt) public pure returns (address) {
         bytes memory bytecode = type(EOADelegator).creationCode;
         bytes32 codeHash = keccak256(bytecode);
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(_sender), bytes32(_salt), codeHash));

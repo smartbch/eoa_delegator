@@ -24,8 +24,9 @@ describe("delegator", function () {
         }
     )
 
-    it("approve failed", async function () {
+    it("call contract failed", async function () {
         let contract = vaultCt.attach(eoa.address);
+        expect(await usd.balanceOf(eoa.address)).to.equal(0);
         await expect(contract.work()).to.be.revertedWith("ERC20: transfer amount exceeds balance");
         expect(await usd.balanceOf(vault.address)).to.equal(0n);
         expect(await usd.allowance(eoa.address, vault.address)).to.equal(0n);
@@ -38,11 +39,15 @@ describe("delegator", function () {
         expect(await abc.balanceOf(eoa.address)).to.equal(2000n * 10n ** 18n);
         console.log("eoa address:", eoa.address);
         let contract = vaultCt.attach(eoa.address);
-        await contract.work()
+        const tx = await contract.work();
+        const receipt = await tx.wait();
         expect(await usd.balanceOf(vault.address)).to.equal(100n * 10n ** 18n);
         expect(await usd.allowance(eoa.address, vault.address)).to.equal(0n);
         expect(await abc.balanceOf(vault.address)).to.equal(100n * 10n ** 18n);
         expect(await abc.allowance(eoa.address, vault.address)).to.equal(0n);
+
+        const res = await contract.callStatic.work()
+        expect(res).to.equal(await vault.LONG_STRING());
     });
 
     it("test factory", async function () {
