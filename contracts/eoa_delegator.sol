@@ -54,7 +54,7 @@ contract EOADelegator {
             calldatacopy(callRetPtr, 0, inputSize)
             let result := call(gas(), contractAddr, callvalue(), callRetPtr, inputSize, 0, 0)
             retSize := returndatasize()
-            callRetPtr := add(callRetPtr, inputSize)
+            //callRetPtr := add(callRetPtr, inputSize)
             returndatacopy(callRetPtr, 0, retSize)
             if eq(result, 0) {
                 revert (callRetPtr, retSize)
