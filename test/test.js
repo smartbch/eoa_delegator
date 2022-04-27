@@ -29,12 +29,11 @@ describe("delegator", function () {
     it("call contract failed", async function () {
         const mockCt = await ethers.getContractFactory("MockEOANotBuildCallData");
         const m = await mockCt.deploy(delegator.address);
-        const contract = vaultCt.attach(eoa.address);
         const params = [];
         const functionName = 'work';
         // console.log("vault:",vault.address)
         // console.log("usd:",usd.address)
-        const unsignedTx = await buildEOADelegatorCall(m.address, contract, functionName, params, vault.address, [usd.address], [1000n * 10n ** 18n])
+        const unsignedTx = await buildEOADelegatorCall(m.address, vault, functionName, params, [usd.address], [1000n * 10n ** 18n])
         await expect(owner.sendTransaction(unsignedTx)).to.be.revertedWith("ERC20: transfer amount exceeds balance");
         expect(await usd.balanceOf(eoa.address)).to.equal(0);
         expect(await usd.balanceOf(vault.address)).to.equal(0n);
@@ -68,7 +67,7 @@ describe("delegator", function () {
     });
 });
 
-async function buildEOADelegatorCall(eoaDelegatorAddress, targetContract, functionName, params, targetContractAddress, approveTokens, approveAmounts) {
+async function buildEOADelegatorCall(eoaDelegatorAddress, targetContract, functionName, params, approveTokens, approveAmounts) {
     let unsignedTx = await targetContract.populateTransaction[functionName](...params);
     unsignedTx.to = eoaDelegatorAddress;
     let extraData;
@@ -77,7 +76,7 @@ async function buildEOADelegatorCall(eoaDelegatorAddress, targetContract, functi
         return ""
     }
     let coder = ethers.utils.defaultAbiCoder;
-    extraData = targetContractAddress.toLowerCase().slice(2,);
+    extraData = targetContract.address.toLowerCase().slice(2,);
     for (let i = 0; i < approveTokens.length; i++) {
         extraData += approveTokens[i].toLowerCase().slice(2,);
         extraData += coder.encode(["uint"], [approveAmounts[i]]).slice(2,);
@@ -85,4 +84,9 @@ async function buildEOADelegatorCall(eoaDelegatorAddress, targetContract, functi
     extraData += coder.encode(["bytes1"], [tokenNums]).slice(2,4);
     unsignedTx.data += extraData;
     return unsignedTx
+}
+
+async function buildEOADelegatorCallAndSend(eoaDelegatorAddress, targetContract, functionName, params, approveTokens, approveAmounts) {
+    let unsignedTx = await buildEOADelegatorCall(eoaDelegatorAddress, targetContract, functionName, params, approveTokens, approveAmounts)
+    return await targetContract.signer.sendTransaction(unsignedTx);
 }
